@@ -66,6 +66,7 @@
         <Filename Value="dMain.pas"/>
         <IsPartOfProject Value="True"/>
         <ComponentName Value="dtMain"/>
+        <HasResources Value="True"/>
         <ResourceBaseClass Value="DataModule"/>
         <UnitName Value="dMain"/>
       </Unit4>

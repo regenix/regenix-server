@@ -20,16 +20,26 @@ type
     btnStopServer: TBitBtn;
     GroupBox1: TGroupBox;
     GroupBox2: TGroupBox;
+    GroupBox3: TGroupBox;
     Image1: TImage;
     Label1: TLabel;
     Label2: TLabel;
     Label3: TLabel;
+    Label4: TLabel;
+    Label5: TLabel;
+    Label6: TLabel;
+    Label7: TLabel;
+    labMongoDBVersion1: TLabel;
+    labNginxVersion: TLabel;
+    labPHPVersion: TLabel;
+    labMongoDBVersion: TLabel;
     Shape1: TShape;
     StatusBar: TStatusBar;
     procedure btnExitClick(Sender: TObject);
     procedure btnRestartServerClick(Sender: TObject);
     procedure btnStartServerClick(Sender: TObject);
     procedure btnStopServerClick(Sender: TObject);
+    procedure FormCreate(Sender: TObject);
   private
     { private declarations }
   public
@@ -69,6 +79,13 @@ begin
   Core.StopServer;
   btnStopServer.Enabled    := false;
   btnRestartServer.Enabled := false;
+end;
+
+procedure TfmMain.FormCreate(Sender: TObject);
+begin
+  labNginxVersion.Caption   := Core.version.Nginx;
+  labPHPVersion.Caption     := Core.version.PHP;
+  labMongoDBVersion.Caption := Core.version.MongoDB;
 end;
 
 

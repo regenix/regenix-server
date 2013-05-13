@@ -10,6 +10,7 @@ uses
 
 type
   { Core }
+  TVersions = class;
 
   Core = class(TObject)
   private
@@ -30,6 +31,7 @@ type
 
         class procedure killProcess(p: TProcess);
   public
+        class var version: TVersions;
         class var status: String;
         class var serverPath: String;
         class var path: String;
@@ -53,9 +55,73 @@ type
         procedure onMessage(Sender: TObject);
   end;
 
+  { TVersions }
+
+  TVersions = class(TObject)
+  private
+    process: TProcess;
+
+    FMongoDB: String;
+    FNginx: String;
+    FPHP: String;
+  protected
+    function execute(Command: String): String;
+  public
+    constructor Create;
+    destructor Destroy;
+
+    property PHP: String read FPHP;
+    property MongoDB: String read FMongoDB;
+    property Nginx: String read FNginx;
+
+    procedure UpdateVersions;
+  end;
+
 implementation
 
 uses dMain;
+
+{ TVersions }
+
+function TVersions.execute(Command: String): String;
+var
+  output: TStrings;
+begin
+ output := TStringList.Create;
+
+ process.Executable := Command;
+ process.Execute;
+ output.LoadFromStream(process.Output);
+
+ Result := Trim(output.Text);
+
+ if (Result = '') then
+ begin
+      output.LoadFromStream(process.Stderr);
+      Result := Trim(output.Text);
+ end;
+ output.Free;
+end;
+
+constructor TVersions.Create;
+begin
+   process := TProcess.Create(nil);
+   process.Options := process.Options + [poNoConsole, poWaitOnExit, poUsePipes];
+   UpdateVersions;
+end;
+
+destructor TVersions.Destroy;
+begin
+   process.Free;
+end;
+
+procedure TVersions.UpdateVersions;
+begin
+   FPHP     := execute('"' + Core.serverPath + 'usr/php/php.exe" --version');
+   FMongoDB := execute('"' + Core.serverPath + 'usr/mongodb/bin/mongod.exe" --version');
+   FNginx   := execute('"' + Core.serverPath + 'nginx/nginx.exe" -v');
+end;
+
 
 { Core }
 
@@ -138,6 +204,8 @@ begin
   mongoProcess.CommandLine := '"' + serverPath + 'usr/mongodb/bin/mongod.exe"' +
                            ' --logpath "'+ serverPath +'logs/mongodb.log"' +
                            ' --dbpath "'+ serverPath +'/data/mongodb/" --directoryperdb --journal';
+
+  version := TVersions.Create;
 end;
 
 class procedure Core.PostInitialize;

@@ -1,13 +1,14 @@
 object fmMain: TfmMain
-  Left = 663
+  Left = 426
   Height = 381
-  Top = 302
+  Top = 105
   Width = 570
   BorderIcons = [biSystemMenu, biMinimize]
   BorderStyle = bsSingle
   Caption = 'Regenix Server: Control'
   ClientHeight = 381
   ClientWidth = 570
+  OnCreate = FormCreate
   Position = poScreenCenter
   LCLVersion = '1.0.8.0'
   object Shape1: TShape
@@ -650,6 +651,92 @@ object fmMain: TfmMain
       OnClick = btnStartServerClick
       Spacing = 7
       TabOrder = 1
+    end
+  end
+  object GroupBox3: TGroupBox
+    Left = 192
+    Height = 249
+    Top = 96
+    Width = 361
+    Caption = ' Versions '
+    ClientHeight = 231
+    ClientWidth = 357
+    TabOrder = 3
+    object Label4: TLabel
+      Left = 14
+      Height = 16
+      Top = 8
+      Width = 37
+      Caption = 'Nginx:'
+      Font.Style = [fsBold]
+      ParentColor = False
+      ParentFont = False
+    end
+    object Label5: TLabel
+      Left = 14
+      Height = 16
+      Top = 32
+      Width = 27
+      Caption = 'PHP:'
+      Font.Style = [fsBold]
+      ParentColor = False
+      ParentFont = False
+    end
+    object Label6: TLabel
+      Left = 14
+      Height = 16
+      Top = 104
+      Width = 60
+      Caption = 'MongoDB:'
+      Font.Style = [fsBold]
+      ParentColor = False
+      ParentFont = False
+    end
+    object labNginxVersion: TLabel
+      Left = 54
+      Height = 16
+      Top = 8
+      Width = 280
+      AutoSize = False
+      Caption = '-'
+      ParentColor = False
+    end
+    object labPHPVersion: TLabel
+      Left = 22
+      Height = 48
+      Top = 48
+      Width = 320
+      AutoSize = False
+      Caption = '...'
+      ParentColor = False
+    end
+    object labMongoDBVersion: TLabel
+      Left = 22
+      Height = 40
+      Top = 120
+      Width = 320
+      AutoSize = False
+      Caption = '...'
+      ParentColor = False
+    end
+    object Label7: TLabel
+      Left = 14
+      Height = 16
+      Top = 168
+      Width = 43
+      Caption = 'MySQL:'
+      Font.Style = [fsBold]
+      ParentColor = False
+      ParentFont = False
+    end
+    object labMongoDBVersion1: TLabel
+      Left = 22
+      Height = 30
+      Top = 184
+      Width = 320
+      AutoSize = False
+      Caption = '...'
+      ParentColor = False
     end
   end
 end
