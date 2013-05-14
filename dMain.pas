@@ -17,12 +17,8 @@ type
     itExit: TMenuItem;
     itAbout: TMenuItem;
     MenuItem1: TMenuItem;
-    itStartServer: TMenuItem;
     MenuItem2: TMenuItem;
-    MenuItem3: TMenuItem;
     itOpenControl: TMenuItem;
-    itStopServer: TMenuItem;
-    itRestartServer: TMenuItem;
     trayMenu: TPopupMenu;
     procedure DataModuleCreate(Sender: TObject);
     procedure itExitClick(Sender: TObject);

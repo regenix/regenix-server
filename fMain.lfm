@@ -1,7 +1,7 @@
 object fmMain: TfmMain
-  Left = 426
+  Left = 405
   Height = 381
-  Top = 105
+  Top = 156
   Width = 570
   BorderIcons = [biSystemMenu, biMinimize]
   BorderStyle = bsSingle
@@ -9,6 +9,7 @@ object fmMain: TfmMain
   ClientHeight = 381
   ClientWidth = 570
   OnCreate = FormCreate
+  OnShow = FormShow
   Position = poScreenCenter
   LCLVersion = '1.0.8.0'
   object Shape1: TShape
@@ -20,12 +21,14 @@ object fmMain: TfmMain
     Pen.Style = psClear
   end
   object StatusBar: TStatusBar
+    Cursor = crHandPoint
     Left = 0
     Height = 23
     Top = 358
     Width = 570
     AutoHint = True
     Panels = <>
+    OnClick = StatusBarClick
   end
   object Image1: TImage
     Left = 16
@@ -605,7 +608,7 @@ object fmMain: TfmMain
       Spacing = 7
       TabOrder = 0
     end
-    object btnStartServer2: TBitBtn
+    object btnConfiguration: TBitBtn
       Cursor = crHandPoint
       Left = 14
       Height = 30
@@ -648,7 +651,7 @@ object fmMain: TfmMain
         000000000000000000000000000000000000908E8CFF8F8D8BFF908E8CFF0000
         00000000000000000000000000000000000000000000FFFFFF00
       }
-      OnClick = btnStartServerClick
+      OnClick = btnConfigurationClick
       Spacing = 7
       TabOrder = 1
     end
@@ -738,5 +741,71 @@ object fmMain: TfmMain
       Caption = '...'
       ParentColor = False
     end
+    object labLinkRockMongo: TLabel
+      Cursor = crHandPoint
+      Left = 78
+      Height = 14
+      Top = 104
+      Width = 60
+      Caption = 'rockmongo'
+      Font.Color = 16744448
+      Font.Height = -11
+      Font.Style = [fsUnderline]
+      ParentColor = False
+      ParentFont = False
+      Visible = False
+      OnClick = labLinkRockMongoClick
+    end
+    object labPHPInfo: TLabel
+      Cursor = crHandPoint
+      Left = 46
+      Height = 14
+      Top = 32
+      Width = 43
+      Caption = 'phpinfo'
+      Font.Color = 16744448
+      Font.Height = -11
+      Font.Style = [fsUnderline]
+      ParentColor = False
+      ParentFont = False
+      Visible = False
+      OnClick = labPHPInfoClick
+    end
+    object labLocalhost: TLabel
+      Cursor = crHandPoint
+      Left = 262
+      Height = 14
+      Top = 0
+      Width = 85
+      Caption = 'http://localhost/'
+      Font.Color = 16744448
+      Font.Height = -11
+      Font.Style = [fsUnderline]
+      ParentColor = False
+      ParentFont = False
+      Visible = False
+      OnClick = labLocalhostClick
+    end
+  end
+  object labPHPInfo1: TLabel
+    Cursor = crHandPoint
+    Left = 504
+    Height = 14
+    Top = 56
+    Width = 53
+    Caption = 'regenix.ru'
+    Font.Color = 16744448
+    Font.Height = -11
+    Font.Style = [fsUnderline]
+    ParentColor = False
+    ParentFont = False
+    OnClick = labPHPInfo1Click
+  end
+  object IdleTimer: TIdleTimer
+    AutoEnabled = True
+    Interval = 200
+    OnTimer = IdleTimerTimer
+    left = 496
+    top = 304
   end
 end

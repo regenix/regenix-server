@@ -1,3 +1,4 @@
+{%RunCommand $MakeExe($(EdFile)) -start -h}
 unit uCore;
 
 {$mode delphi}{$H+}
@@ -6,10 +7,11 @@ interface
 
 uses
   Classes, SysUtils, ExtCtrls, Forms, Configuration, Menus, Dialogs, LCLType,
-  process, Graphics, IntfGraphics;
+  process, Graphics, IntfGraphics, registry;
 
 type
   { Core }
+  TServerStatus = (ssStarted, ssStopped);
   TVersions = class;
 
   Core = class(TObject)
@@ -28,11 +30,9 @@ type
         procedure onMinimize(Sender: TObject);
         procedure onTrayDblClick(Sender: TObject);
         procedure onTrayClick(Sender: TObject);
-
-        class procedure killProcess(p: TProcess);
   public
         class var version: TVersions;
-        class var status: String;
+        class var status: TServerStatus;
         class var serverPath: String;
         class var path: String;
         class var cgiPort: Integer;
@@ -52,20 +52,38 @@ type
         class procedure RestartServer;
         class procedure StopServer;
 
+        class procedure RegisterOnStartUp(ServerStart: Boolean);
+        class procedure UnregisterOnStartUp();
+        class function isRegisteredOnStartUp: Boolean;
+        class function isStartOnStartUp: Boolean;
+
+        class function IsCmdParam(Param: String): Boolean;
+
+        class procedure ShowConfiguration;
+
         procedure onMessage(Sender: TObject);
   end;
 
-  { TVersions }
+  { CoreUtils }
 
+  CoreUtils = class(TObject)
+  protected
+        class var lastProccess: TProcess;
+  public
+        class function Execute(Command: String; Parameters: Array of String; Options: TProcessOptions = [poNoConsole, poWaitOnExit]): String;
+        class procedure KillProcess(ProcessID: Integer); overload;
+        class procedure KillProcess(Process: TProcess); overload;
+        class function GetLastProcessID: Integer;
+  end;
+
+  { TVersions }
   TVersions = class(TObject)
   private
-    process: TProcess;
-
     FMongoDB: String;
     FNginx: String;
     FPHP: String;
   protected
-    function execute(Command: String): String;
+
   public
     constructor Create;
     destructor Destroy;
@@ -79,47 +97,88 @@ type
 
 implementation
 
-uses dMain;
+uses dMain, fConfiguration;
+
+{ CoreUtils }
+
+class function CoreUtils.Execute(Command: String; Parameters: Array of String; Options: TProcessOptions = [poNoConsole, poWaitOnExit]): String;
+  var
+     output: TStrings;
+     process: TProcess;
+     i: Integer;
+begin
+  if Assigned(lastProccess) then
+     FreeAndNil(lastProccess);
+
+  Result  := '';
+  output  := TStringList.Create;
+  process := TProcess.Create(nil);
+  lastProccess := process;
+  try
+    process.Options    := process.Options + Options + [poUsePipes];
+    process.Executable := Command;
+
+    for i := 0 to High(Parameters) do
+        process.Parameters.Add(Parameters[i]);
+
+    process.Execute;
+
+    if process.Output <> nil then
+    begin
+         output.LoadFromStream(process.Output);
+         Result := Trim(output.Text);
+    end;
+
+    if Result = '' then
+    begin
+         if process.Stderr <> nil then
+         begin
+              output.LoadFromStream(process.Stderr);
+              Result := Trim(output.Text);
+         end;
+    end;
+  finally
+    output.Free;
+  end;
+end;
+
+class procedure CoreUtils.KillProcess(ProcessID: Integer);
+begin
+  if ProcessID <> 0 then
+     Execute('taskkill',  ['/F', '/PID', IntToStr(ProcessID)]);
+end;
+
+class procedure CoreUtils.KillProcess(Process: TProcess);
+begin
+  if (Process <> nil) and (Process.Active) then
+     KillProcess(Process.ProcessID);
+end;
+
+class function CoreUtils.GetLastProcessID: Integer;
+begin
+  if lastProccess <> nil then
+     Result := lastProccess.ProcessID
+  else
+     Result := 0;
+end;
 
 { TVersions }
 
-function TVersions.execute(Command: String): String;
-var
-  output: TStrings;
-begin
- output := TStringList.Create;
-
- process.Executable := Command;
- process.Execute;
- output.LoadFromStream(process.Output);
-
- Result := Trim(output.Text);
-
- if (Result = '') then
- begin
-      output.LoadFromStream(process.Stderr);
-      Result := Trim(output.Text);
- end;
- output.Free;
-end;
-
 constructor TVersions.Create;
 begin
-   process := TProcess.Create(nil);
-   process.Options := process.Options + [poNoConsole, poWaitOnExit, poUsePipes];
    UpdateVersions;
 end;
 
 destructor TVersions.Destroy;
 begin
-   process.Free;
+
 end;
 
 procedure TVersions.UpdateVersions;
 begin
-   FPHP     := execute('"' + Core.serverPath + 'usr/php/php.exe" --version');
-   FMongoDB := execute('"' + Core.serverPath + 'usr/mongodb/bin/mongod.exe" --version');
-   FNginx   := execute('"' + Core.serverPath + 'nginx/nginx.exe" -v');
+   FPHP     := CoreUtils.Execute(Core.serverPath + 'usr/php/php.exe', ['--version']);
+   FMongoDB := CoreUtils.Execute(Core.serverPath + 'usr/mongodb/bin/mongod.exe', ['--version']);
+   FNginx   := CoreUtils.Execute(Core.serverPath + 'nginx/nginx.exe', ['-v']);
 end;
 
 
@@ -150,18 +209,9 @@ begin
   Core.Restore;
 end;
 
-class procedure Core.killProcess(p: TProcess);
-begin
-  if ( p.Running ) then
-  begin
-       process.CommandLine := 'taskkill /F /PID ' + IntToStr(p.ProcessID);
-       process.Options     := process.Options + [poNoConsole, poWaitOnExit];
-       process.Execute;
-  end;
-end;
-
 class procedure Core.Initialize;
 begin
+  status     := ssStopped;
   serverPath := StringReplace(ExtractFilePath(ExtractFileDir(ParamStr(0))), '\', '/', [rfReplaceAll]);
   path       := StringReplace(ExtractFilePath(ParamStr(0)), '\', '/', [rfReplaceAll]);
 
@@ -215,6 +265,9 @@ begin
 
      tray.PopUpMenu.AutoPopup := true;
      tray.Icons := dtMain.ImageList;
+
+     if IsCmdParam('-start') then
+        Core.StartServer;
 end;
 
 class procedure Core.Finalize;
@@ -261,7 +314,9 @@ end;
 
 class procedure Core.StartServer;
 begin
-  status := 'started';
+  Core.StopServer;
+
+  status := ssStarted;
   cgiProccess.Execute;
   nginxProcess.Execute;
   mongoProcess.Execute;
@@ -275,10 +330,106 @@ end;
 
 class procedure Core.StopServer;
 begin
-  killProcess(cgiProccess);
-  killProcess(nginxProcess);
-  killProcess(mongoProcess);
-  status := 'stopped';
+  CoreUtils.Execute(serverPath + 'nginx/nginx.exe', ['-s', 'quit', '-p', serverPath + 'nginx/']);
+  CoreUtils.KillProcess(cgiProccess);
+  CoreUtils.KillProcess(mongoProcess);
+
+  status := ssStopped;
+end;
+
+const
+  ApplicationTitle = 'RegenixServer';
+  StartupSection   = 'Software\Microsoft\Windows\CurrentVersion\RunOnce' + #0;
+  StartupRoot      = HKEY_CURRENT_USER;
+
+class procedure Core.RegisterOnStartUp(ServerStart: Boolean);
+ var
+    cmd: String;
+begin
+  with TRegIniFile.Create('') do
+   try
+     RootKey := StartupRoot;
+     cmd     := '"' + Application.ExeName + '" -h';
+     if ServerStart then
+       cmd := cmd + ' -start';
+
+     WriteString(StartupSection, ApplicationTitle, cmd) ;
+   finally
+     Free;
+   end;
+end;
+
+class procedure Core.UnregisterOnStartUp;
+begin
+  with TRegIniFile.Create('') do
+   try
+     RootKey := StartupRoot;
+     DeleteKey(StartupSection, ApplicationTitle);
+   finally
+     Free;
+   end;
+end;
+
+class function Core.isRegisteredOnStartUp: Boolean;
+  var
+  cmd: String;
+begin
+  Result := false;
+  with TRegIniFile.Create('') do
+   try
+     RootKey := StartupRoot;
+     cmd := ReadString(StartupSection, ApplicationTitle, '');
+     Result := cmd <> '';
+   finally
+     Free;
+   end;
+end;
+
+class function Core.isStartOnStartUp: Boolean;
+var
+   cmd: String;
+begin
+Result := false;
+with TRegIniFile.Create('') do
+ try
+   RootKey := StartupRoot;
+   cmd := ReadString(StartupSection, ApplicationTitle, '');
+   Result := Pos(' -start', cmd) > 0;
+ finally
+   Free;
+ end;
+end;
+
+class function Core.IsCmdParam(Param: String): Boolean;
+  var
+     i: integer;
+begin
+Result := false;
+  for i := 1 to Paramcount do
+  begin
+    if ParamStr(i) = Param then
+    begin
+       Result := true;
+       break;
+    end;
+  end;
+end;
+
+class procedure Core.ShowConfiguration;
+begin
+  fmConfiguration.cbRunProgram.Checked  := isRegisteredOnStartUp;
+  fmConfiguration.cbStartServer.Checked := isStartOnStartUp;
+
+  if fmConfiguration.ShowModal = IDOK then
+  begin
+       if fmConfiguration.cbRunProgram.Checked then
+       begin
+         RegisterOnStartUp(fmConfiguration.cbStartServer.Checked);
+       end else
+       begin
+         UnregisterOnStartUp();
+       end;
+  end;
 end;
 
 procedure Core.onMessage(Sender: TObject);
